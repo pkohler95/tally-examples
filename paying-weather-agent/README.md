@@ -95,27 +95,33 @@ cp .env.example .env.local
 
 ## Run it
 
-You need **two terminals**. From the repo root:
-
-**Terminal 1 — the mock x402 weather service:**
-
-```bash
-pnpm weather-server
-```
-
-Leaves it listening on `http://localhost:4242`.
-
-**Terminal 2 — the agent:**
+By default the agent talks to Tally's hosted demo x402 endpoint, so
+one terminal is enough. From the repo root:
 
 ```bash
 pnpm weather-agent "what's the weather in Tokyo?"
 ```
 
-Or run it from this directory directly: `pnpm weather-agent "..."`.
+Try a few different cities. Seeded data covers Tokyo, San Francisco
+(or SF), London, New York (or NYC), Los Angeles (or LA), Paris,
+Berlin, and Sydney; unknown cities get a generic fallback.
 
-Try a few different cities. The example seeds data for Tokyo, San
-Francisco (or SF), London, New York (or NYC), Los Angeles (or LA),
-Paris, Berlin, and Sydney; unknown cities get a generic fallback.
+### Optional: run your own server
+
+To learn how an x402 server works (or to modify the logic), the
+included `server.ts` is a ~150-line standalone Node implementation
+that does the same thing as the hosted endpoint.
+
+Set `WEATHER_SERVICE_URL=http://localhost:4242/weather` in
+`.env.local`, then in two terminals:
+
+```bash
+# Terminal 1
+pnpm weather-server
+
+# Terminal 2
+pnpm weather-agent "what's the weather in Tokyo?"
+```
 
 ## Configuration
 
@@ -130,8 +136,8 @@ ones marked **required**.
 | `OPENAI_API_KEY` | one of these two | — | Used when ANTHROPIC_API_KEY is unset |
 | `TALLY_BASE_URL` | no | `https://app.tallyforagents.com` | Set to localhost:3000 for dev |
 | `TALLY_AGENT_ID` | no | `weather-agent` | The agent the example registers |
-| `WEATHER_SERVICE_URL` | no | `http://localhost:4242` | Where to find the mock server |
-| `WEATHER_SERVICE_WALLET` | no | `0x...dEaD` | Where payments land |
+| `WEATHER_SERVICE_URL` | no | hosted demo endpoint | Set to `http://localhost:4242/weather` to use the local `server.ts` |
+| `WEATHER_SERVICE_WALLET` | no | `0x...dEaD` | Only used by `server.ts` if you run it locally |
 | `BASE_SEPOLIA_RPC_URL` | no | public endpoint | Set to your Alchemy key for less rate-limiting |
 | `CLAUDE_MODEL` | no | `claude-sonnet-4-5` | Pick a different Claude model |
 | `OPENAI_MODEL` | no | `gpt-4o-mini` | Pick a different OpenAI model |

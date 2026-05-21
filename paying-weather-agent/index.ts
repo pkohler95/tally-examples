@@ -26,8 +26,14 @@ const apiKey = process.env.TALLY_API_KEY;
 const baseUrl =
   process.env.TALLY_BASE_URL ?? "https://app.tallyforagents.com";
 const agentId = process.env.TALLY_AGENT_ID ?? "weather-agent";
+// Defaults to Tally's hosted demo endpoint so the example is one-
+// terminal clone-and-run. To use the local server.ts in this
+// directory (e.g. to inspect / modify the server logic), set
+// WEATHER_SERVICE_URL=http://localhost:4242 in .env.local and run
+// `pnpm weather-server` in a second terminal.
 const serviceUrl =
-  process.env.WEATHER_SERVICE_URL ?? "http://localhost:4242";
+  process.env.WEATHER_SERVICE_URL ??
+  "https://app.tallyforagents.com/api/demo/x402-weather";
 
 if (!apiKey) {
   console.error("✗ Set TALLY_API_KEY in your environment.");

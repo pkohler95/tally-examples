@@ -68,7 +68,13 @@ export async function callGetWeatherTool(
   ctx: ToolContext,
   input: { city: string },
 ): Promise<ToolResult> {
-  const url = `${ctx.serviceUrl}/weather?city=${encodeURIComponent(input.city)}`;
+  // serviceUrl IS the full resource path; the example doesn't
+  // assume a /weather subpath because the hosted endpoint
+  // (https://app.tallyforagents.com/api/demo/x402-weather) is
+  // already at the resource. For the local server.ts, set
+  // WEATHER_SERVICE_URL=http://localhost:4242/weather (which the
+  // server listens on).
+  const url = `${ctx.serviceUrl}?city=${encodeURIComponent(input.city)}`;
 
   // Step 1: first call. Expect 402.
   console.log(`  → GET ${url}`);
