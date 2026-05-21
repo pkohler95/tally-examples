@@ -48,18 +48,38 @@ answer.
 
 ## Prerequisites
 
-1. **Tally account** with an agent registered and a permission
-   granted on a funded wallet (see the
-   [main Tally quickstart](https://www.tallyforagents.com/docs)). The
-   agent should have caps of at least **$0.05/tx** and **$0.50/day**
-   (the example uses 10 cities × $0.05 each). The defaults
-   the dashboard pre-fills ($10/tx, $100/day) are more than enough.
-2. **Sepolia USDC + ETH** in the wallet. ~$1 of USDC + ~0.01 ETH
-   covers many runs. USDC from
-   [Circle's faucet](https://faucet.circle.com), ETH from
-   [Alchemy's faucet](https://www.alchemy.com/faucets/base-sepolia).
-3. **Either an Anthropic or OpenAI API key.** Either works — the
-   example auto-detects which one you've configured.
+You'll need a Tally account with one **agent that has an active
+permission** on a **funded wallet**. If you haven't done this yet,
+the steps in the dashboard are:
+
+1. **Sign in** at [app.tallyforagents.com](https://app.tallyforagents.com).
+   First sign-in auto-provisions an account and a "Main Wallet."
+2. **Fund the wallet** with a small amount of Base Sepolia USDC and
+   ETH. ~$1 of USDC + ~0.01 ETH covers many runs:
+   - USDC: [Circle's faucet](https://faucet.circle.com)
+     → Base Sepolia → paste your Main Wallet address
+   - ETH: [Alchemy's Base Sepolia faucet](https://www.alchemy.com/faucets/base-sepolia)
+3. **Register an agent.** Dashboard → Agents → "Register agent" →
+   give it the ID `weather-agent` (the default this example
+   registers — matches the `TALLY_AGENT_ID` default, so you won't
+   need to override anything). Or use any name and set
+   `TALLY_AGENT_ID=<your-id>` in `.env.local` later.
+4. **Grant a permission** to that agent on your Main Wallet.
+   Dashboard → Agents → click the agent → "Grant permission" → pick
+   the wallet, accept the defaults ($10/tx, $100/day), approve via
+   passkey. The mock weather service charges $0.05 per query, so the
+   defaults are more than enough.
+5. **Create an API key.** Dashboard → API keys → "Create new key" →
+   copy the plaintext (shown once). You'll paste this in `.env.local`.
+
+You'll also need one of these API keys for the LLM side:
+
+- **Anthropic API key** (recommended — the example was built and
+  tested against Claude), or
+- **OpenAI API key** (works just as well)
+
+The example auto-detects which you have. If you set both, Anthropic
+wins; unset `ANTHROPIC_API_KEY` to force OpenAI for a run.
 
 ## Setup
 
@@ -70,6 +90,7 @@ pnpm install
 cd paying-weather-agent
 cp .env.example .env.local
 # Fill in TALLY_API_KEY + one of ANTHROPIC_API_KEY / OPENAI_API_KEY
+# If your agent ID isn't "weather-agent", also set TALLY_AGENT_ID.
 ```
 
 ## Run it
@@ -89,6 +110,8 @@ Leaves it listening on `http://localhost:4242`.
 ```bash
 pnpm weather-agent "what's the weather in Tokyo?"
 ```
+
+Or run it from this directory directly: `pnpm weather-agent "..."`.
 
 Try a few different cities. The example seeds data for Tokyo, San
 Francisco (or SF), London, New York (or NYC), Los Angeles (or LA),
