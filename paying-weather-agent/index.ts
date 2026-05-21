@@ -2,6 +2,8 @@
 //
 // Run with:
 //   pnpm --filter @tallyforagents/examples weather-agent "what's the weather in Tokyo?"
+
+import "./load-env"; // Loads .env.local from this directory; see load-env.ts.
 //
 // What it does:
 //   1. Detects which LLM provider to use (Anthropic preferred if both

@@ -1,3 +1,5 @@
+import "./load-env"; // Loads .env.local from this directory.
+
 // Mock x402-style weather service. Run this in one terminal:
 //
 //   pnpm --filter @tallyforagents/examples weather-server
