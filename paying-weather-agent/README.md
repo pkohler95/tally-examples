@@ -87,7 +87,14 @@ From the repo root:
 
 ```bash
 pnpm install
-cd paying-weather-agent
+# Make sure the SDK is built (the `prepare` script handles this on
+# fresh installs; if you've been editing the SDK source, rebuild):
+pnpm --filter @tallyforagents/sdk build
+```
+
+Then in `examples/paying-weather-agent/`:
+
+```bash
 cp .env.example .env.local
 # Fill in TALLY_API_KEY + one of ANTHROPIC_API_KEY / OPENAI_API_KEY
 # If your agent ID isn't "weather-agent", also set TALLY_AGENT_ID.
@@ -95,18 +102,34 @@ cp .env.example .env.local
 
 ## Run it
 
-By default the agent talks to Tally's hosted demo x402 endpoint, so
-one terminal is enough. From the repo root:
+Two ways. Same agent, same payment flow — only the interface differs.
+
+### Option A — chat UI (recommended for showing the demo)
 
 ```bash
-pnpm weather-agent "what's the weather in Tokyo?"
+pnpm --filter @tallyforagents/examples weather-chat
+```
+
+Opens an HTTP server on `http://localhost:4243`. Open that URL in a
+browser and ask about the weather. Each assistant reply shows a chip
+underneath with the amount paid + a link to the on-chain transaction
+on Basescan. Override the port with `CHAT_PORT=<port>` if 4243 is
+taken.
+
+### Option B — single CLI invocation
+
+By default the agent talks to Tally's hosted demo x402 endpoint, so
+one terminal is enough:
+
+```bash
+pnpm --filter @tallyforagents/examples weather-agent "what's the weather in Tokyo?"
 ```
 
 Try a few different cities. Seeded data covers Tokyo, San Francisco
 (or SF), London, New York (or NYC), Los Angeles (or LA), Paris,
 Berlin, and Sydney; unknown cities get a generic fallback.
 
-### Optional: run your own server
+### Optional: run your own x402 server
 
 To learn how an x402 server works (or to modify the logic), the
 included `server.ts` is a ~150-line standalone Node implementation
@@ -117,10 +140,12 @@ Set `WEATHER_SERVICE_URL=http://localhost:4242/weather` in
 
 ```bash
 # Terminal 1
-pnpm weather-server
+pnpm --filter @tallyforagents/examples weather-server
 
-# Terminal 2
-pnpm weather-agent "what's the weather in Tokyo?"
+# Terminal 2 — either UI works
+pnpm --filter @tallyforagents/examples weather-chat
+# or:
+pnpm --filter @tallyforagents/examples weather-agent "what's the weather in Tokyo?"
 ```
 
 ## Configuration

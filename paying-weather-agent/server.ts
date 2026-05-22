@@ -46,8 +46,8 @@ const PRICE_DECIMAL = "0.05";
 // The agent code is unchanged — same SDK calls, same protocol shape.
 const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
-// Hardcoded "premium" weather data. In a real service this would be
-// a paid API integration, scraping, or proprietary dataset.
+// Fallback hardcoded data — used when Open-Meteo is unreachable or
+// WEATHER_MOCK_ONLY=1 is set. Real-data path is the default below.
 const WEATHER_DATA: Record<
   string,
   { temp_c: number; conditions: string; humidity: number }
@@ -64,6 +64,128 @@ const WEATHER_DATA: Record<
   berlin: { temp_c: 8, conditions: "rain", humidity: 80 },
   sydney: { temp_c: 24, conditions: "clear", humidity: 58 },
 };
+
+// Set WEATHER_MOCK_ONLY=1 in .env.local to force the hardcoded path
+// (offline dev, Open-Meteo outage, etc.).
+const USE_REAL_WEATHER = process.env.WEATHER_MOCK_ONLY !== "1";
+
+// WMO weather codes from Open-Meteo's `current.weather_code` →
+// human-readable conditions. Full table:
+// https://open-meteo.com/en/docs#weathervariables
+const WMO_CODES: Record<number, string> = {
+  0: "clear sky",
+  1: "mainly clear",
+  2: "partly cloudy",
+  3: "overcast",
+  45: "fog",
+  48: "depositing rime fog",
+  51: "light drizzle",
+  53: "drizzle",
+  55: "dense drizzle",
+  56: "light freezing drizzle",
+  57: "freezing drizzle",
+  61: "light rain",
+  63: "rain",
+  65: "heavy rain",
+  66: "light freezing rain",
+  67: "freezing rain",
+  71: "light snow",
+  73: "snow",
+  75: "heavy snow",
+  77: "snow grains",
+  80: "light rain showers",
+  81: "rain showers",
+  82: "violent rain showers",
+  85: "light snow showers",
+  86: "snow showers",
+  95: "thunderstorm",
+  96: "thunderstorm with hail",
+  99: "thunderstorm with heavy hail",
+};
+
+interface OpenMeteoGeocode {
+  results?: Array<{
+    name: string;
+    country?: string;
+    latitude: number;
+    longitude: number;
+  }>;
+}
+
+interface OpenMeteoForecast {
+  current: {
+    temperature_2m: number;
+    relative_humidity_2m: number;
+    weather_code: number;
+  };
+}
+
+// Fetches the current weather for a city via Open-Meteo. Two HTTP
+// calls: geocoding (city → lat/lng) then forecast (lat/lng → current
+// conditions). Both endpoints are free, no API key required, no
+// signup. Throws on any failure so getWeather() can fall back to mock.
+async function fetchOpenMeteoWeather(city: string): Promise<{
+  temp_c: number;
+  conditions: string;
+  humidity: number;
+  source: "open-meteo";
+  location: string;
+}> {
+  const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`;
+  const geoRes = await fetch(geoUrl);
+  if (!geoRes.ok) {
+    throw new Error(`geocoding HTTP ${geoRes.status}`);
+  }
+  const geo = (await geoRes.json()) as OpenMeteoGeocode;
+  const place = geo.results?.[0];
+  if (!place) {
+    throw new Error(`no geocoding result for "${city}"`);
+  }
+
+  const wxUrl =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${place.latitude}&longitude=${place.longitude}` +
+    `&current=temperature_2m,relative_humidity_2m,weather_code`;
+  const wxRes = await fetch(wxUrl);
+  if (!wxRes.ok) {
+    throw new Error(`forecast HTTP ${wxRes.status}`);
+  }
+  const wx = (await wxRes.json()) as OpenMeteoForecast;
+  const c = wx.current;
+
+  return {
+    temp_c: Math.round(c.temperature_2m * 10) / 10, // 1 decimal
+    conditions: WMO_CODES[c.weather_code] ?? "unknown conditions",
+    humidity: c.relative_humidity_2m,
+    source: "open-meteo",
+    location: place.country ? `${place.name}, ${place.country}` : place.name,
+  };
+}
+
+async function getWeather(city: string): Promise<{
+  temp_c: number;
+  conditions: string;
+  humidity: number;
+  source?: "open-meteo" | "mock";
+  location?: string;
+}> {
+  if (USE_REAL_WEATHER) {
+    try {
+      const real = await fetchOpenMeteoWeather(city);
+      console.log(`[server] real weather: ${real.location} ${real.temp_c}°C / ${real.conditions}`);
+      return real;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unknown";
+      console.log(`[server] Open-Meteo failed (${msg}), falling back to mock data`);
+    }
+  }
+  const mock = WEATHER_DATA[city] ?? {
+    temp_c: 18,
+    conditions: "no data for that city; here's a reasonable guess",
+    humidity: 60,
+  };
+  return { ...mock, source: "mock" };
+}
 
 function paymentRequiredBody(resource: string): string {
   return JSON.stringify(
@@ -149,11 +271,7 @@ const server = createServer(async (req, res) => {
 
   console.log(`[server] payment verified, returning weather for ${city}`);
 
-  const data = WEATHER_DATA[city] ?? {
-    temp_c: 18,
-    conditions: "no data for that city; here's a reasonable guess",
-    humidity: 60,
-  };
+  const data = await getWeather(city);
 
   res.writeHead(200, { "content-type": "application/json" });
   res.end(
@@ -174,5 +292,8 @@ server.listen(PORT, () => {
   console.log(`\nWeather x402 service`);
   console.log(`  listening on http://localhost:${PORT}`);
   console.log(`  pay-to wallet: ${SERVICE_WALLET}`);
-  console.log(`  price per query: ${PRICE_DECIMAL} USDC (${PRICE_ATOMIC} atomic)\n`);
+  console.log(`  price per query: ${PRICE_DECIMAL} USDC (${PRICE_ATOMIC} atomic)`);
+  console.log(
+    `  weather source: ${USE_REAL_WEATHER ? "Open-Meteo (real data, mock fallback)" : "mock only (WEATHER_MOCK_ONLY=1)"}\n`,
+  );
 });

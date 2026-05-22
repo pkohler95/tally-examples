@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tally · Paying weather agent</title>
+    <link
+      rel="stylesheet"
+      href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #fbfbfa;
+        --bg-card: #ffffff;
+        --bg-subtle: #f3f1ec;
+        --border: #e8e4dc;
+        --text-primary: #1c1917;
+        --text-secondary: #57534e;
+        --text-tertiary: #78716c;
+        --brand: #88a4d6;
+        --brand-strong: #4a73b3;
+        --brand-subtle: #eaf0f9;
+        --on-brand: #0e1830;
+        --shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 16px rgba(28, 25, 23, 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family:
+          "Switzer", -apple-system, BlinkMacSystemFont, "Inter Tight", "Segoe UI",
+          system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        font-feature-settings: "ss01", "cv11";
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 28px 0 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .logo {
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+
+      .logo-dot {
+        color: var(--brand-strong);
+      }
+
+      .subtitle {
+        color: var(--text-tertiary);
+        font-size: 14px;
+      }
+
+      .header-meta {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .header-meta a {
+        color: inherit;
+        text-decoration: none;
+        border-bottom: 1px dotted var(--text-tertiary);
+      }
+
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 0 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .msg {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 14px;
+        line-height: 1.5;
+        font-size: 15px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .msg.user {
+        align-self: flex-end;
+        background: var(--brand-subtle);
+        color: var(--on-brand);
+      }
+
+      .msg.assistant {
+        align-self: flex-start;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+      }
+
+      .msg.error {
+        align-self: flex-start;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        font-size: 13px;
+      }
+
+      .msg-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-self: flex-start;
+        max-width: 80%;
+      }
+
+      .receipts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-left: 4px;
+      }
+
+      .receipt {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--brand-subtle);
+        color: var(--on-brand);
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 500;
+      }
+
+      .receipt a {
+        color: var(--brand-strong);
+        text-decoration: none;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .receipt a:hover {
+        text-decoration: underline;
+      }
+
+      .receipt-icon {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: var(--brand-strong);
+        border-radius: 999px;
+      }
+
+      .typing {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+      }
+
+      .typing span {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--text-tertiary);
+        animation: bounce 1.2s infinite;
+      }
+
+      .typing span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+
+      .typing span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
+      @keyframes bounce {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      footer {
+        padding: 16px 0 28px;
+        border-top: 1px solid var(--border);
+      }
+
+      form {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--bg-card);
+        font: inherit;
+        font-size: 15px;
+        color: var(--text-primary);
+        outline: none;
+        transition:
+          border-color 120ms ease,
+          box-shadow 120ms ease;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 4px var(--brand-subtle);
+      }
+
+      input[type="text"]:disabled {
+        opacity: 0.6;
+      }
+
+      button {
+        padding: 0 18px;
+        border: none;
+        border-radius: 12px;
+        background: var(--brand-strong);
+        color: white;
+        font: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 120ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--on-brand);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .empty-state {
+        align-self: center;
+        text-align: center;
+        color: var(--text-tertiary);
+        padding: 60px 20px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .empty-state .title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+
+      .suggestions {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .suggestion {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .suggestion:hover {
+        background: var(--brand-subtle);
+        border-color: var(--brand);
+        color: var(--on-brand);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="logo">Tally<span class="logo-dot">.</span></span>
+      <span class="subtitle">Paying weather agent</span>
+      <span class="header-meta" id="meta">connecting…</span>
+    </header>
+
+    <main id="messages">
+      <div class="empty-state" id="empty">
+        <div class="title">Ask about the weather, anywhere.</div>
+        <div>
+          The agent calls a paywalled API and pays the
+          <strong>$0.05 USDC</strong> fee via Tally on your behalf.
+        </div>
+        <div class="suggestions">
+          <button type="button" class="suggestion">What's the weather in Tokyo?</button>
+          <button type="button" class="suggestion">How cold is it in Reykjavik?</button>
+          <button type="button" class="suggestion">Is it raining in London?</button>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <form id="composer" autocomplete="off">
+        <input
+          id="input"
+          type="text"
+          placeholder="Ask about the weather…"
+          autofocus
+          required
+        />
+        <button id="send" type="submit">Send</button>
+      </form>
+    </footer>
+
+    <script>
+      const messages = document.getElementById("messages");
+      const empty = document.getElementById("empty");
+      const form = document.getElementById("composer");
+      const input = document.getElementById("input");
+      const sendBtn = document.getElementById("send");
+      const meta = document.getElementById("meta");
+
+      // Show agent + wallet info in the header.
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((d) => {
+          meta.innerHTML = `agent <strong>${d.agent}</strong> · wallet <code>${d.wallet.slice(0, 8)}…${d.wallet.slice(-4)}</code>`;
+        })
+        .catch(() => {
+          meta.textContent = "agent offline";
+        });
+
+      // Click a suggestion to populate + auto-submit.
+      document.querySelectorAll(".suggestion").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          input.value = btn.textContent;
+          form.dispatchEvent(new Event("submit"));
+        });
+      });
+
+      function clearEmpty() {
+        if (empty && empty.parentElement) empty.remove();
+      }
+
+      function scrollToBottom() {
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function appendUser(text) {
+        clearEmpty();
+        const el = document.createElement("div");
+        el.className = "msg user";
+        el.textContent = text;
+        messages.appendChild(el);
+        scrollToBottom();
+      }
+
+      function appendLoading() {
+        const el = document.createElement("div");
+        el.className = "msg assistant";
+        el.innerHTML =
+          '<div class="typing"><span></span><span></span><span></span></div>';
+        messages.appendChild(el);
+        scrollToBottom();
+        return el;
+      }
+
+      function basescanUrl(txHash) {
+        // Hard-coded to Sepolia because the example runs on Base
+        // Sepolia testnet. Live mode would use the equivalent mainnet
+        // explorer; not relevant here.
+        return `https://sepolia.basescan.org/tx/${txHash}`;
+      }
+
+      function buildReceiptsRow(payments) {
+        if (!payments || payments.length === 0) return null;
+        const row = document.createElement("div");
+        row.className = "receipts";
+        for (const p of payments) {
+          const chip = document.createElement("span");
+          chip.className = "receipt";
+          chip.innerHTML = `
+            <span class="receipt-icon"></span>
+            Paid $${p.amountUsdc} USDC ·
+            <a href="${basescanUrl(p.txHash)}" target="_blank" rel="noreferrer">
+              ${p.txHash.slice(0, 10)}…
+            </a>
+          `;
+          row.appendChild(chip);
+        }
+        return row;
+      }
+
+      function replaceWithAssistantReply(loadingEl, text, payments) {
+        // Render the message bubble + optional payment chip(s) below it.
+        const group = document.createElement("div");
+        group.className = "msg-group";
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg assistant";
+        bubble.textContent = text;
+        group.appendChild(bubble);
+
+        const receipts = buildReceiptsRow(payments);
+        if (receipts) group.appendChild(receipts);
+
+        loadingEl.replaceWith(group);
+        scrollToBottom();
+      }
+
+      function replaceWithError(loadingEl, errText) {
+        const el = document.createElement("div");
+        el.className = "msg error";
+        el.textContent = errText;
+        loadingEl.replaceWith(el);
+        scrollToBottom();
+      }
+
+      function setBusy(busy) {
+        input.disabled = busy;
+        sendBtn.disabled = busy;
+        if (!busy) input.focus();
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = "";
+        appendUser(text);
+        const loading = appendLoading();
+        setBusy(true);
+
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text }),
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            replaceWithError(
+              loading,
+              data.error
+                ? `${data.error}`
+                : `Request failed (HTTP ${res.status})`,
+            );
+            return;
+          }
+
+          replaceWithAssistantReply(loading, data.text, data.payments);
+        } catch (err) {
+          replaceWithError(loading, err.message || "Network error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    </script>
+  </body>
+</html>

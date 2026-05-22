@@ -20,6 +20,19 @@ export interface ToolContext {
   agentId: string;
   walletAddress: string;
   serviceUrl: string;
+  /** Optional accumulator for payment receipts. When the caller sets
+   *  this to an empty array, `callGetWeatherTool` pushes one entry per
+   *  successful Tally payment. The chat UI server uses this to render
+   *  receipt chips below the assistant's reply; the CLI doesn't set it
+   *  and the field stays unused. */
+  payments?: ToolPaymentReceipt[];
+}
+
+export interface ToolPaymentReceipt {
+  txHash: string;
+  amountUsdc: string;
+  to: string;
+  memo: string;
 }
 
 export interface ToolResult {
@@ -150,6 +163,16 @@ export async function callGetWeatherTool(
     return { ok: false, error: "Tally returned no tx_hash" };
   }
   console.log(`  ← payment submitted: ${payment.tx_hash}`);
+
+  // Record the receipt if the caller is collecting them (chat UI does;
+  // CLI doesn't). Done after the success branch so partial-payment
+  // failures don't show up as completed receipts.
+  ctx.payments?.push({
+    txHash: payment.tx_hash,
+    amountUsdc: decimalAmount,
+    to: terms.payTo,
+    memo: `weather/${input.city}`,
+  });
 
   // Step 4: retry with payment proof. The server will block until the
   // tx is confirmed on-chain (a few seconds on Base Sepolia).
