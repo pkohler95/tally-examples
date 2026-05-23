@@ -17,15 +17,21 @@ funds at risk, but the integration is real end-to-end.
 
 ## Prerequisites
 
-1. **A Tally account** with an agent registered and a permission
-   granted on a funded wallet. Walk through the
-   [Quickstart](https://docs.tallyforagents.com/quickstart) to get
-   set up.
+1. **A Tally account with a funded wallet and an API key.** You do
+   **not** need to register an agent or grant a permission in
+   advance — the example creates the agent for you on first run and
+   prints the exact dashboard URL for the permission grant. New to
+   Tally? Walk through the [Quickstart](https://docs.tallyforagents.com/quickstart).
 2. **Sepolia USDC + ETH** in your Tally wallet. USDC from
    [Circle's faucet](https://faucet.circle.com), ETH from
    [Alchemy's Base Sepolia faucet](https://www.alchemy.com/faucets/base-sepolia).
 3. **Node.js 18+** and **pnpm** (or npm / yarn — adjust commands
    accordingly).
+
+> **First-run note**: every example here is two-phase. Run it once →
+> the script auto-creates its agent and exits with a "grant a
+> permission" prompt that includes the exact dashboard URL → click
+> the URL, grant the permission, approve via passkey → re-run.
 
 ## Setup
 

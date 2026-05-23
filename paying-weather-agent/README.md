@@ -48,9 +48,13 @@ answer.
 
 ## Prerequisites
 
-You'll need a Tally account with one **agent that has an active
-permission** on a **funded wallet**. If you haven't done this yet,
-the steps in the dashboard are:
+You'll need a Tally account with a **funded wallet** and an **API
+key**. You do **not** need to register an agent or grant a permission
+in advance — the example creates the agent automatically on first run,
+and then prints the exact dashboard URL where you grant it a
+permission. Two-phase first run: auto-create, then go grant.
+
+If you haven't set up Tally yet:
 
 1. **Sign in** at [app.tallyforagents.com](https://app.tallyforagents.com).
    First sign-in auto-provisions an account and a "Main Wallet."
@@ -59,18 +63,22 @@ the steps in the dashboard are:
    - USDC: [Circle's faucet](https://faucet.circle.com)
      → Base Sepolia → paste your Main Wallet address
    - ETH: [Alchemy's Base Sepolia faucet](https://www.alchemy.com/faucets/base-sepolia)
-3. **Register an agent.** Dashboard → Agents → "Register agent" →
-   give it the ID `weather-agent` (the default this example
-   registers — matches the `TALLY_AGENT_ID` default, so you won't
-   need to override anything). Or use any name and set
-   `TALLY_AGENT_ID=<your-id>` in `.env.local` later.
-4. **Grant a permission** to that agent on your Main Wallet.
-   Dashboard → Agents → click the agent → "Grant permission" → pick
-   the wallet, accept the defaults ($10/tx, $100/day), approve via
-   passkey. The mock weather service charges $0.05 per query, so the
-   defaults are more than enough.
-5. **Create an API key.** Dashboard → API keys → "Create new key" →
+3. **Create an API key.** Dashboard → API keys → "Create new key" →
    copy the plaintext (shown once). You'll paste this in `.env.local`.
+
+That's the full setup. When you first run the example, the script:
+
+- Auto-creates a `weather-agent` agent in your account (idempotent —
+  re-runs are safe). To use a different name, set
+  `TALLY_AGENT_ID=<your-id>` in `.env.local`.
+- Detects that the new agent has no active permissions and exits
+  with a prompt that includes the exact dashboard URL for the
+  permission grant.
+- After you click that URL, click "Grant permission", pick your
+  funded wallet, accept the default caps ($10/tx, $100/day — the
+  weather service charges $0.05 per query so the defaults are
+  plenty), and approve via passkey, the agent is ready.
+- Re-run the example and it'll connect through.
 
 You'll also need one of these API keys for the LLM side:
 

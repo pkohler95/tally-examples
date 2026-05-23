@@ -78,16 +78,20 @@ async function main() {
   const agent = await tally.agents.upsert({ id: agentId });
 
   if (agent.wallets.length === 0) {
+    const dashboardUrl = `${baseUrl}/${agent.account_slug}/agents/${encodeURIComponent(agent.id)}`;
     console.error(
       `\n✗ Agent "${agentId}" has no active permissions on any wallet.`,
     );
+    console.error(`  Grant one in the dashboard:`);
+    console.error(`  ${dashboardUrl}`);
+    console.error(``);
     console.error(
-      "  Open the Tally dashboard, find this agent, and grant it a",
+      `  Click "Grant permission", pick a funded wallet, accept the defaults`,
     );
     console.error(
-      "  permission on a funded wallet. Recommended caps: $10/tx, $100/day.",
+      `  ($10/tx, $100/day), and approve via passkey. The weather service`,
     );
-    console.error(`  The mock weather service charges 0.05 USDC per query.`);
+    console.error(`  charges 0.05 USDC per query.`);
     process.exit(1);
   }
 
