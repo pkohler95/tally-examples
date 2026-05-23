@@ -4,16 +4,15 @@
 // agent-openai.ts each adapt it into the format their SDK expects
 // (Anthropic uses `input_schema`, OpenAI nests under `function`).
 //
-// `callGetWeatherTool` is the actual work the tool does:
-//   1. Call the mock x402 weather service
-//   2. If it returns 402, parse the payment terms
-//   3. Pay via Tally
-//   4. Retry the request with the tx hash in `x-payment` header
-//   5. Return the weather data (or an error)
+// `callGetWeatherTool` is the actual work the tool does. The full
+// x402 dance (initial fetch → parse 402 terms → pay via Tally → retry
+// with X-Payment header) lives inside the SDK as `tally.x402.fetch`;
+// this tool just calls it with a URL.
 //
 // The agent code calls this when the LLM decides to use the tool.
 
 import type { Tally } from "@tallyforagents/sdk";
+import { TallyError } from "@tallyforagents/sdk";
 
 export interface ToolContext {
   tally: Tally;
@@ -61,22 +60,6 @@ export const TOOL_DEFINITION = {
   },
 };
 
-interface X402PaymentTerms {
-  scheme: string;
-  network: string;
-  maxAmountRequired: string;
-  resource: string;
-  description: string;
-  payTo: string;
-  asset: string;
-}
-
-interface X402Response {
-  x402Version: number;
-  error?: string;
-  accepts?: X402PaymentTerms[];
-}
-
 export async function callGetWeatherTool(
   ctx: ToolContext,
   input: { city: string },
@@ -88,131 +71,59 @@ export async function callGetWeatherTool(
   // WEATHER_SERVICE_URL=http://localhost:4242/weather (which the
   // server listens on).
   const url = `${ctx.serviceUrl}?city=${encodeURIComponent(input.city)}`;
-
-  // Step 1: first call. Expect 402.
   console.log(`  → GET ${url}`);
-  let response: Response;
+
+  let result;
   try {
-    response = await fetch(url);
-  } catch (e) {
-    return {
-      ok: false,
-      error: `Could not reach weather service: ${e instanceof Error ? e.message : "unknown"}`,
-    };
-  }
-
-  if (response.status === 200) {
-    return { ok: true, data: await response.json() };
-  }
-
-  if (response.status !== 402) {
-    const body = await response.text();
-    return {
-      ok: false,
-      error: `Unexpected status ${response.status}: ${body.slice(0, 200)}`,
-    };
-  }
-
-  // Step 2: parse the x402 payment terms.
-  let paymentTerms: X402Response;
-  try {
-    paymentTerms = (await response.json()) as X402Response;
-  } catch {
-    return { ok: false, error: "Service returned invalid 402 body" };
-  }
-
-  const terms = paymentTerms.accepts?.[0];
-  if (!terms) {
-    return { ok: false, error: "402 response had no accepts[] terms" };
-  }
-
-  if (terms.network !== "base-sepolia") {
-    return {
-      ok: false,
-      error: `Unsupported network: ${terms.network} (this agent is configured for base-sepolia)`,
-    };
-  }
-
-  const atomicAmount = BigInt(terms.maxAmountRequired);
-  const decimalAmount = formatAtomicUSDC(atomicAmount);
-
-  console.log(
-    `  ← 402 Payment Required: ${decimalAmount} USDC to ${terms.payTo}`,
-  );
-
-  // Step 3: pay via Tally.
-  console.log(`  → tally.payments.create()`);
-  let payment;
-  try {
-    payment = await ctx.tally.payments.create({
+    result = await ctx.tally.x402.fetch(url, {
       agent_id: ctx.agentId,
       wallet: ctx.walletAddress,
-      to: terms.payTo,
-      amount_usdc: decimalAmount,
       memo: `x402:weather/${input.city}`,
       idempotency_key: `weather-${input.city}-${Date.now()}`,
     });
   } catch (e) {
+    if (e instanceof TallyError) {
+      return { ok: false, error: `${e.type}: ${e.message}` };
+    }
     return {
       ok: false,
-      error: `Payment failed: ${e instanceof Error ? e.message : "unknown"}`,
+      error: `x402 fetch failed: ${e instanceof Error ? e.message : "unknown"}`,
     };
   }
 
-  if (!payment.tx_hash) {
-    return { ok: false, error: "Tally returned no tx_hash" };
-  }
-  console.log(`  ← payment submitted: ${payment.tx_hash}`);
+  if (result.payment) {
+    console.log(
+      `  ← 402 Payment Required: ${result.payment.amount_usdc} USDC to ${result.payment.to}`,
+    );
+    console.log(`  ← payment submitted: ${result.payment.tx_hash}`);
+    console.log(
+      `  → GET ${url}  (X-Payment: ${result.payment.tx_hash.slice(0, 16)}…)`,
+    );
 
-  // Record the receipt if the caller is collecting them (chat UI does;
-  // CLI doesn't). Done after the success branch so partial-payment
-  // failures don't show up as completed receipts.
-  ctx.payments?.push({
-    txHash: payment.tx_hash,
-    amountUsdc: decimalAmount,
-    to: terms.payTo,
-    memo: `weather/${input.city}`,
-  });
-
-  // Step 4: retry with payment proof. The server will block until the
-  // tx is confirmed on-chain (a few seconds on Base Sepolia).
-  console.log(`  → GET ${url}  (X-Payment: ${payment.tx_hash.slice(0, 16)}…)`);
-  let retryResponse: Response;
-  try {
-    retryResponse = await fetch(url, {
-      headers: { "x-payment": payment.tx_hash },
+    // Record the receipt if the caller is collecting them (chat UI
+    // does; CLI doesn't). Done after the SDK signals success so
+    // partial-payment failures don't show up as completed receipts.
+    ctx.payments?.push({
+      txHash: result.payment.tx_hash,
+      amountUsdc: result.payment.amount_usdc,
+      to: result.payment.to,
+      memo: `weather/${input.city}`,
     });
-  } catch (e) {
-    return {
-      ok: false,
-      error: `Retry failed: ${e instanceof Error ? e.message : "unknown"}`,
-      payment: payment.tx_hash,
-    };
   }
 
-  if (retryResponse.status !== 200) {
-    const body = await retryResponse.text();
+  if (!result.response.ok) {
+    const body = await result.response.text();
     return {
       ok: false,
-      error: `Retry rejected (${retryResponse.status}): ${body.slice(0, 200)}`,
-      payment: payment.tx_hash,
+      error: `Service returned ${result.response.status}: ${body.slice(0, 200)}`,
+      payment: result.payment?.tx_hash,
     };
   }
 
   console.log(`  ← 200 OK\n`);
-
   return {
     ok: true,
-    data: await retryResponse.json(),
-    payment: payment.tx_hash,
+    data: await result.response.json(),
+    payment: result.payment?.tx_hash,
   };
-}
-
-function formatAtomicUSDC(atomic: bigint): string {
-  // USDC has 6 decimals. Convert atomic → decimal string without
-  // trailing zeros (so "50000" → "0.05", not "0.050000").
-  const whole = atomic / 1_000_000n;
-  const frac = atomic % 1_000_000n;
-  const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
-  return fracStr ? `${whole}.${fracStr}` : `${whole}`;
 }

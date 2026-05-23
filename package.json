@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
-    "@tallyforagents/sdk": "^0.1.0",
+    "@tallyforagents/sdk": "^0.3.0",
     "dotenv": "^16.4.7",
     "openai": "^4.73.1",
     "viem": "^2.48.11"
