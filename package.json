@@ -5,7 +5,6 @@
   "description": "Runnable examples for the Tally TypeScript SDK.",
   "type": "module",
   "scripts": {
-    "research-bot": "tsx research-bot.ts",
     "weather-server": "tsx paying-weather-agent/server.ts",
     "weather-agent": "tsx paying-weather-agent/index.ts",
     "weather-chat": "tsx paying-weather-agent/chat-server.ts"

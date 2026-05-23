@@ -13,8 +13,7 @@ funds at risk, but the integration is real end-to-end.
 
 | Example | Demonstrates |
 |---|---|
-| [`research-bot.ts`](./research-bot.ts) | Bare SDK payment — register an agent, list, send a USDC transfer through a granted permission. No LLM. The simplest end-to-end demo. |
-| [`paying-weather-agent/`](./paying-weather-agent) | LLM agent (Claude or OpenAI) that autonomously pays for paywalled API calls using the [x402](https://www.x402.org) protocol shape. Includes a mock x402 server with real on-chain payment verification via viem. |
+| [`paying-weather-agent/`](./paying-weather-agent) | LLM agent (Claude or OpenAI) that autonomously pays for paywalled API calls using the [x402](https://www.x402.org) protocol shape. Ships with a browser chat UI, a CLI mode, and a runnable local x402 server. Real on-chain payment verification via viem; live weather data via Open-Meteo. |
 
 ## Prerequisites
 
@@ -38,23 +37,22 @@ pnpm install
 
 ## Running an example
 
-Each example has its own README with detailed instructions. The
-short version:
-
-**`research-bot.ts`** — single-shot SDK payment demo:
+The full walkthrough lives in
+[`paying-weather-agent/README.md`](./paying-weather-agent/README.md).
+Quick start:
 
 ```bash
-TALLY_API_KEY='tly_test_...' \
-TALLY_BASE_URL='https://app.tallyforagents.com' \
-TALLY_AGENT_ID='your-agent-id' \
-TALLY_WALLET='0x...' \
-TALLY_RECIPIENT='0x...' \
-pnpm research-bot
-```
+cd paying-weather-agent
+cp .env.example .env.local    # fill in TALLY_API_KEY + ANTHROPIC_API_KEY (or OPENAI_API_KEY)
+cd ..
 
-**`paying-weather-agent/`** — LLM-powered x402 agent. See
-[its README](./paying-weather-agent/README.md) for the full
-walkthrough.
+# Browser chat UI (recommended):
+pnpm weather-chat
+# Then open http://localhost:4243
+
+# Or a one-shot CLI:
+pnpm weather-agent "what's the weather in Tokyo?"
+```
 
 ## Where to learn more
 
